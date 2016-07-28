@@ -15,6 +15,7 @@ trait TableTomlGen {
     with CommentTomlGen =>
 
   val sps = List(" ", "\t")
+  val enclosers = List(("[", "]"), ("[[", "]]"))
 
   private def repeat(s: String, n: Int): String = {
     @annotation.tailrec
@@ -66,10 +67,25 @@ trait TableTomlGen {
     sp <- oneOf(sps)
     i <- chooseNum(0, 10)
     sep <- const(repeat(sp, i) + "." + repeat(sp, i))
-  } yield idTableFormat(labels, ("[", sep , "]"))
+  } yield idTableFormat(labels, ("[", sep, "]"))
+
+  def tableArrayDefGen: Gen[String] = for {
+    labels <- nonEmptyListOf(doubleQuoteStrGen)
+    sp <- oneOf(sps)
+    i <- chooseNum(0, 10)
+    sep <- const(repeat(sp, i) + "." + repeat(sp, i))
+  } yield idTableFormat(labels, ("[[", sep, "]]"))
+
+  def singleOrArrayTableDefGen: Gen[String] = for {
+    labels <- nonEmptyListOf(doubleQuoteStrGen)
+    paren <- oneOf(enclosers)
+    sp <- oneOf(sps)
+    i <- chooseNum(0, 10)
+    sep <- const(repeat(sp, i) + "." + repeat(sp, i))
+  } yield idTableFormat(labels, (paren._1, sep, paren._2))
 
   def tableGen = for {
-    tdef <- tableDefGen
+    tdef <- singleOrArrayTableDefGen
     n <- chooseNum(0, 10)
     ps <- listOfN(n, pairWithCommentsGen)
     c1 <- commentGen
@@ -105,6 +121,13 @@ class TableTomlSpec extends PropSpec
     forAll(tableDefGen) {
       s: String =>
         shouldBeSuccess[Seq[String]](tableDef.parse(s))
+    }
+  }
+
+  property("parse array of tables definitions") {
+    forAll(tableArrayDefGen) {
+      s: String =>
+        shouldBeSuccess[Seq[String]](tableArrayDef.parse(s))
     }
   }
 

@@ -102,28 +102,13 @@ trait TomlParser extends ParserUtil with TomlSymbol {
   val `false` = P { "false" } map (_ => False)
   val boolean: Parser[Bool] = P { `true` | `false` }
 
-  // replace below with `def`, witch implcitly receives a closure
-  // that handle `String`s to [[java.util.Date]]s.
-  /* Even though this extra parsing is not necessary,
-   * it is done just for simplicity, avoiding the use
-   * of `java.util.Calendar` instances. */
-  /*
-  lazy val date: Parser[Date] =
-    rfc3339.opaque("<valid-date-rfc3339>").map { t =>
-      Date(formatter.parse(t))
-    }
-  */
   def date(implicit dateConverter: String => JDate): Parser[Date] =
     rfc3339.opaque("<valid-date-rfc3339>").map { t =>
+      /* Even though this extra parsing is not necessary,
+       * it is done just for simplicity, avoiding the use
+       * of `java.util.Calendar` instances. */
       Date(dateConverter(t))
     }
-
-  // We cannot place formatter here, because Scala.js has no implementation
-  // of hijacked [[java.text.SimpleDateFormat]].
-  /*
-  private val formatter = 
-    new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-  */
 
   def twice[T](p: Parser[T]) = p ~ p
   def fourTimes[T](p: Parser[T]) = twice(p) ~ twice(p)
@@ -139,14 +124,18 @@ trait TomlParser extends ParserUtil with TomlSymbol {
   lazy val pair: Parser[Pair] =
     P { validKey ~ WS0.? ~ "=" ~ WS0.? ~ elem } map Pair
   lazy val array: Parser[Arr] =
-    P { "[" ~ WS ~ elem.rep(sep=WS0.? ~ "," ~/ WS) ~ WS ~ "]" } map Arr
+    P { "[" ~ WS ~ elem.?.rep(sep=WS0.? ~ ("," ~ !(",,")) ~/ WS) ~ WS ~ "]" } map { result =>
+      Arr(result.filter(e => e.nonEmpty).map(_.get))
+    }
 
   val tableIds: Parser[Seq[String]] =
     P { validKey.rep(min=1, sep=WS0.? ~ "." ~ WS0.?) }
   val tableDef: Parser[Seq[String]] =
     P { "[" ~ WS0.? ~ tableIds ~ WS0.? ~ "]" }
+  val tableArrayDef: Parser[Seq[String]] =
+    P { "[[" ~ WS0.? ~ tableIds ~ WS0.? ~ "]]" }
   val table: Parser[Table] =
-    P { WS ~ tableDef ~ WS ~ pair.rep(sep=WS) } map {
+    P { WS ~ (tableDef | tableArrayDef) ~ WS ~ pair.rep(sep=WS) } map {
       t => Table(t._1.toVector.map(Str.cleanStr), t._2)
     }
 
