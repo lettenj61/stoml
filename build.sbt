@@ -1,33 +1,44 @@
-name := "stoml"
-
-organization := "com.github.jvican"
-
-version := "0.1"
-
 scalaVersion := "2.11.7"
+enablePlugins(ScalaJSPlugin)
 
-libraryDependencies ++= Vector(
-  "com.lihaoyi" %% "fastparse" % "0.3.4",
-  "org.scalacheck" %% "scalacheck" % "1.12.5" % "test",
-  "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test"
-)
+lazy val stoml = crossProject
+  .settings(
 
-licenses := Seq("MIT License" -> url("http://www.opensource.org/licenses/MIT"))
+    name := "stoml",
+    organization := "com.github.jvican",
+    version := "0.1",
+    scalaVersion := "2.11.7",
 
-sonatypeProfileName := "com.github.jvican"
+    libraryDependencies ++= Vector(
+      "com.lihaoyi" %%% "fastparse" % "0.3.4",
+      "org.scalacheck" %%% "scalacheck" % "1.12.5" % "test"
+    ),
 
-pomExtra in Global := {
-  <url>https://github.com/jvican/stoml.git</url>
-  <scm>
-    <developerConnection>scm:git:git@github.com:jvican</developerConnection>
-    <url>https://github.com/jvican/stoml.git</url>
-    <connection>scm:git:git@github.com:jvican/stoml.git</connection>
-  </scm>
-  <developers>
-    <developer>
-      <id>jvican</id>
-      <name>Jorge Vicente Cantero</name>
-      <url>https://github.com/jvican</url>
-    </developer>
-  </developers>
-}
+    licenses := Seq("MIT License" -> url("http://www.opensource.org/licenses/MIT")),
+
+    sonatypeProfileName := "com.github.jvican",
+
+    pomExtra in Global := {
+      <url>https://github.com/jvican/stoml.git</url>
+      <scm>
+        <developerConnection>scm:git:git@github.com:jvican</developerConnection>
+        <url>https://github.com/jvican/stoml.git</url>
+        <connection>scm:git:git@github.com:jvican/stoml.git</connection>
+      </scm>
+      <developers>
+        <developer>
+          <id>jvican</id>
+          <name>Jorge Vicente Cantero</name>
+          <url>https://github.com/jvican</url>
+        </developer>
+      </developers>
+    }
+  ).jvmSettings(
+    libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.4" % "test"
+  ).jsSettings(
+    scalaJSUseRhino in Global := false,
+    libraryDependencies += "org.scalatest" %%% "scalatest" % "3.0.0-RC4" % "test"
+  )
+
+lazy val stomlJS = stoml.js
+lazy val stomlJVM = stoml.jvm
